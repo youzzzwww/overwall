@@ -53,15 +53,15 @@ int socks5_remote_sock(const char* buffer, int size, int* frame_size) {
             *frame_size = 10;
             return get_sock_with_addr(&serv_addr);
         } else if (atype == 0x03) {
-            char host_len = 0;
+            uint8_t host_len = 0;
             memcpy(&host_len, buffer+4, 1);
-            if ((int)host_len + 7 < size) {
+            if (host_len + 7 <= size) {
                 char* host_str = (char*)malloc(host_len + 1);
                 memset(host_str, 0, host_len+1);
                 memcpy(host_str, buffer+5, host_len);
 
-                char port_str[6];
-                short port = 0;
+                char port_str[6] = {0};
+                uint16_t port = 0;
                 memcpy(&port, buffer+5+host_len, 2);
                 port = ntohs(port);
                 snprintf(port_str, 6, "%d", port);

@@ -7,18 +7,26 @@ TARGET_CXXFLAGS = -g -Wall --std=c++11
 TARGET_LDFLAGS = -pthread -L/usr/local/lib -ldl
 TARGET_INCLUDE = -I$(SRC_PATH)
 TARGET_NAME = $(PROJECT_PATH)/bin/overwall
+TEST_TARGET = $(PROJECT_PATH)/bin/testoverwall
 
 SRC := $(wildcard $(SRC_PATH)/*.cc)
 OBJ := $(notdir $(SRC:.cc=.o))
-OBJS := $(patsubst %,$(TMP_DIR)/%, $(OBJ))
+TEST_OBJ := $(filter-out main.o, $(OBJ))
+MAIN_OBJ := $(filter-out test%, $(OBJ))
+TEST_OBJS := $(patsubst %,$(TMP_DIR)/%, $(TEST_OBJ))
+MAIN_OBJS := $(patsubst %,$(TMP_DIR)/%, $(MAIN_OBJ))
 
-overwall : $(OBJS)
+.PHONY : all
+all : overwall testoverwall
+
+overwall : $(MAIN_OBJS)
 	$(CC) -o $(TARGET_NAME) $^ $(TARGET_LDFLAGS)
+
+testoverwall : $(TEST_OBJS)
+	$(CC) -o $(TEST_TARGET) $^ $(TARGET_LDFLAGS)
 
 $(TMP_DIR)/%.o : $(SRC_PATH)/%.cc
 	$(CC) $(TARGET_CXXFLAGS) -c -o $@ $^ $(TARGET_INCLUDE)
-
-.PHONY : clean
 
 clean :
 	rm -rf ${TMP_DIR}/*
