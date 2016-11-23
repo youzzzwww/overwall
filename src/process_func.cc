@@ -3,9 +3,12 @@
 #include <sys/unistd.h>
 #include <sys/fcntl.h>
 #include <sys/select.h>
+#include <syslog.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <thread>
 #include <mutex>
+#include <algorithm>
 
 #include "utils.h"
 #include "socks5.h"
@@ -23,6 +26,7 @@ void set_nonblocking(int soc) {
 void on_listen(const int listen_soc)
 {
     struct sockaddr_in cli_addr;
+	char client_ip[30];
     socklen_t len = sizeof(cli_addr);
     int connfd;
     while (true) {
@@ -30,6 +34,8 @@ void on_listen(const int listen_soc)
         connfd = accept(listen_soc, (struct sockaddr*)&cli_addr, &len);
         accept_lock.unlock();
 
+		inet_ntop(AF_INET, &cli_addr.sin_addr, client_ip, 30);
+		syslog(LOG_INFO, "accept new connection from %s", client_ip);
         on_connect(connfd);
         close(connfd);
     }
@@ -91,7 +97,8 @@ void on_connect(int connfd) {
                   remotefd = socks5_remote_sock(ibuffer, nbytes, &fsize);
                   if (remotefd > 0) {
                       set_nonblocking(remotefd);
-                      maxfd = max(connfd, remotefd) + 1;
+                      maxfd = std::max(connfd, remotefd) + 1;
+					  syslog(LOG_INFO, "socks5 complete, transfer data next.");
                       status = Stream;
                   } else {
                       return;

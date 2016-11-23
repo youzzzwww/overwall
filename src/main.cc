@@ -76,7 +76,7 @@ int main(int argc, char** argv)
 		syslog(LOG_ERR, "%s", "listenfd not available, abort.");
         return -1;
 	}
-	printf("port is %d, thread_num is %d, listening soc is %d.\n",
+	syslog(LOG_INFO, "port is %d, thread_num is %d, listening soc is %d.\n",
 			port, thread_num, listen_fd);
 
 	std::vector<std::thread> p_array;
