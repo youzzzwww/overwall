@@ -50,8 +50,7 @@ bool test_socks5_host(void) {
 	memcpy(frame+offset, &port, 2);
 	offset += 2;
 
-	int frame_size = 0;
-	int soc = socks5_remote_sock(frame, offset, &frame_size);
+	int soc = socks5_remote_sock(frame, offset);
 	if (soc > 0) {
 		close(soc);
 		return true;
@@ -76,8 +75,7 @@ bool test_socks5_addr(void) {
 	memcpy(frame+offset, &port, 2);
 	offset += 2;
 
-	int frame_size = 0;
-	int soc = socks5_remote_sock(frame, offset, &frame_size);
+	int soc = socks5_remote_sock(frame, offset);
 	if (soc > 0) {
 		close(soc);
 		return true;

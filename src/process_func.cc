@@ -14,7 +14,6 @@
 #include "socks5.h"
 #include "process_func.h"
 
-#define MAX_BUFFER 4096
 std::mutex accept_lock;
 typedef enum {Init, Connecting, Stream} Socks5Status;
 
@@ -48,8 +47,6 @@ void on_connect(int connfd) {
   int select_no;
   Socks5Status status = Init;
   CircularQueue local_queue, remote_queue;
-  char ibuffer[MAX_BUFFER];
-  int nbytes;
 
   set_nonblocking(connfd);
   while (true) {
@@ -77,66 +74,53 @@ void on_connect(int connfd) {
       }
 
       if (FD_ISSET(connfd, &rset)) {
-          if (status == Init) {
-              nbytes = read(connfd, ibuffer, MAX_BUFFER);
-              if (nbytes > 0) {
-                  if (socks5_init_size(ibuffer, nbytes)) {
-                      write_init_reply(connfd);
-                      status = Connecting;
-                  } else {
-                      return; 
-                  }
-              } else {
-                  return;
-              }
+		  if (status == Init) {
+			  if (handle_init_frame(connfd)) {
+				  status = Connecting;
+			  } else {
+				  return;
+			  }
 		  } else if (status == Connecting) {
-              nbytes = read(connfd, ibuffer, MAX_BUFFER);
-              if (nbytes > 0) {
-                  int fsize = 0;
-                  remotefd = socks5_remote_sock(ibuffer, nbytes, &fsize);
-                  if (remotefd > 0) {
-                      set_nonblocking(remotefd);
-                      maxfd = std::max(connfd, remotefd) + 1;
-					  syslog(LOG_INFO, "socks5 complete, transfer data next.");
-                      status = Stream;
-                  } else {
-                      return;
-                  }
-              } else {
-                  return;
-              }
-          } else if (status == Stream) {
-              if (!queue_full(&local_queue)) {
-                  nbytes = read_from_soc(&local_queue, connfd);
-                  if (nbytes > 0) {
-                      FD_SET(remotefd, &wset);
-                  } else {
-                      close(remotefd);
-                      return;
-                  }
-              }
-          }
-      }
-      if (FD_ISSET(remotefd, &rset)) {
-          if (!queue_full(&remote_queue)) {
-              nbytes = read_from_soc(&remote_queue, remotefd);
-              if (nbytes > 0) {
-                  FD_SET(connfd, &wset);
-              } else {
-                  close(remotefd);
-                  return;
-              }
-          }
-      }
-      if (FD_ISSET(connfd, &wset)) {
-          if (!queue_empty(&remote_queue)) {
-              write_to_soc(&remote_queue, connfd);
-          }
-      }
-      if (FD_ISSET(remotefd, &wset)) {
-          if (!queue_empty(&local_queue)) {
-              write_to_soc(&local_queue, remotefd);
-          }
-      }
+			  remotefd = handle_socks5_request(connfd);
+			  if (remotefd > 0) {
+				  set_nonblocking(remotefd);
+				  maxfd = std::max(connfd, remotefd) + 1;
+				  status = Stream;
+			  } else {
+				  return;
+			  }
+		  } else if (status == Stream) {
+			  if (!queue_full(&local_queue)) {
+				  int nbytes = read_from_soc(&local_queue, connfd);
+				  if (nbytes > 0) {
+					  FD_SET(remotefd, &wset);
+				  } else {
+					  close(remotefd);
+					  return;
+				  }
+			  }
+		  }
+	  }
+	  if (FD_ISSET(remotefd, &rset)) {
+		  if (!queue_full(&remote_queue)) {
+			  int nbytes = read_from_soc(&remote_queue, remotefd);
+			  if (nbytes > 0) {
+				  FD_SET(connfd, &wset);
+			  } else {
+				  close(remotefd);
+				  return;
+			  }
+		  }
+	  }
+	  if (FD_ISSET(connfd, &wset)) {
+		  if (!queue_empty(&remote_queue)) {
+			  write_to_soc(&remote_queue, connfd);
+		  }
+	  }
+	  if (FD_ISSET(remotefd, &wset)) {
+		  if (!queue_empty(&local_queue)) {
+			  write_to_soc(&local_queue, remotefd);
+		  }
+	  }
   }
 }

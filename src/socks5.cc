@@ -8,6 +8,20 @@
 
 #include "socks5.h"
 
+#define MAX_BUFFER 1000
+
+int handle_init_frame(int soc) {
+	char ibuffer[MAX_BUFFER];
+	int nbytes = read(soc, ibuffer, MAX_BUFFER);
+	if (nbytes > 0) {
+		if (socks5_init_size(ibuffer, nbytes)) {
+			write_init_reply(soc);
+			return nbytes;
+		}
+	}
+	return -1;
+}
+
 int socks5_init_size(const char* buffer, int size) {
     char version = 0;
     char nmethod = 0;
@@ -26,7 +40,20 @@ int write_init_reply(int soc) {
     return write(soc, reply, sizeof(reply));
 }
 
-int socks5_remote_sock(const char* buffer, int size, int* frame_size) {
+int handle_socks5_request(int soc) {
+	char ibuffer[MAX_BUFFER];
+	int nbytes = read(soc, ibuffer, MAX_BUFFER);
+	if (nbytes > 0) {
+		int remote_soc = socks5_remote_sock(ibuffer, nbytes);
+		if (remote_soc > 0) {
+			write_socks5_reply(soc, remote_soc);
+			return remote_soc;
+		}
+	}
+	return -1;
+}
+
+int socks5_remote_sock(const char* buffer, int size) {
     char version = 0;
     char cmd = 0;
     char atype = 0;
@@ -40,7 +67,7 @@ int socks5_remote_sock(const char* buffer, int size, int* frame_size) {
         if (cmd == 0x01) {
             //connecting
         }
-        memcpy(&atype, buffer+3, 1);
+        memcpy(&atype, buffer+3, 1); // reserved bit
         if (atype == 0x01) {
             //ipv4
             struct sockaddr_in serv_addr;
@@ -50,9 +77,9 @@ int socks5_remote_sock(const char* buffer, int size, int* frame_size) {
                     buffer+4, 4);
             memcpy((char*)&serv_addr.sin_port,
                     buffer+8, 2);
-            *frame_size = 10;
             return get_sock_with_addr(&serv_addr);
         } else if (atype == 0x03) {
+			//host name
             uint8_t host_len = 0;
             memcpy(&host_len, buffer+4, 1);
             if (host_len + 7 <= size) {
@@ -67,7 +94,6 @@ int socks5_remote_sock(const char* buffer, int size, int* frame_size) {
                 snprintf(port_str, 6, "%d", port);
                 int soc = get_sock_with_name(host_str, port_str);
                 free(host_str);
-                *frame_size = 7 + host_len;
                 return soc;
             } else {
                 return -1;
@@ -75,6 +101,21 @@ int socks5_remote_sock(const char* buffer, int size, int* frame_size) {
         }
     }
     return -1;
+}
+
+void write_socks5_reply(int soc, int remote_soc) {
+	char reply[10];
+	reply[0] = 0x05;
+	reply[1] = 0x00;
+	reply[2] = 0x00;
+	reply[3] = 0x01;
+	struct sockaddr_in remote_addr;
+	socklen_t remote_len = sizeof(remote_addr);
+
+	getsockname(remote_soc, (struct sockaddr*)&remote_addr, &remote_len);
+	memcpy(reply+4, (char*)&remote_addr.sin_addr.s_addr, 4);
+	memcpy(reply+8, (char*)&remote_addr.sin_port, 2);
+	write(soc, reply, 10);
 }
 
 int get_sock_with_addr(struct sockaddr_in* pserv_addr) {
