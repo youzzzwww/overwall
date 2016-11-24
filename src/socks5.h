@@ -3,12 +3,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-struct InitReply {
-    char version;
-    char method;
-    InitReply() : version(0x05), method(0x00) {}
-};
-
 int socks5_init_size(const char* buffer, int size);
 
 int write_init_reply(int soc);

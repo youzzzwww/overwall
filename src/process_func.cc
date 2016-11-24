@@ -89,8 +89,7 @@ void on_connect(int connfd) {
               } else {
                   return;
               }
-          }
-          if (status == Connecting) {
+		  } else if (status == Connecting) {
               nbytes = read(connfd, ibuffer, MAX_BUFFER);
               if (nbytes > 0) {
                   int fsize = 0;
@@ -106,8 +105,7 @@ void on_connect(int connfd) {
               } else {
                   return;
               }
-          }
-          if (status == Stream) {
+          } else if (status == Stream) {
               if (!queue_full(&local_queue)) {
                   nbytes = read_from_soc(&local_queue, connfd);
                   if (nbytes > 0) {

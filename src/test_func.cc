@@ -18,11 +18,9 @@ bool test_socks5_resolve(void) {
 }
 
 bool test_init_reply(void) {
-	InitReply reply;
-	char rep[] = {0x05, 0x00};
-	if (strcmp(rep, (char*)&reply) == 0 ) {
+	char reply[] = {0x05, 0x00};
+	if (sizeof(reply) == 2)
 		return true;
-	}
 	return false;
 }
 

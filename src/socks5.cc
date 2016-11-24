@@ -22,8 +22,8 @@ int socks5_init_size(const char* buffer, int size) {
 }
 
 int write_init_reply(int soc) {
-    InitReply reply;
-    return write(soc, &reply, sizeof(InitReply));
+	char reply[] = {0x05, 0x00};
+    return write(soc, reply, sizeof(reply));
 }
 
 int socks5_remote_sock(const char* buffer, int size, int* frame_size) {
