@@ -135,7 +135,7 @@ int get_sock_with_name(const char* hostname, const char* port) {
     int sfd, s;
 
     memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
+    hints.ai_family = AF_INET;    /* Allow IPv4 */
     hints.ai_socktype = SOCK_STREAM; /* Stream socket */
     hints.ai_flags = 0;
     hints.ai_protocol = 0;          /* Any protocol */
