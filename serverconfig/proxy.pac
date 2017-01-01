@@ -1,12 +1,18 @@
 function FindProxyForURL(url, host) {
 	var	DIRECT = "DIRECT";
-	var	PROXY = "SOCKS5 192.168.40.129:1080";
+	var	PROXY = "SOCKS5 yourip:1080";
 
 	var	rules = [
 		"google.com",
 		"facebook.com",
 		"twitter.com",
-		"baidu.com"
+		"youtube.com",
+		"googlevideo.com",
+		"gstatic.com",
+		"googleapis.com",
+		"lang-8.com",
+		"twitch.tv",
+		"ttvnw.net"
 	];
 
 
